@@ -6,7 +6,6 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from pymongo import MongoClient
 import uuid
 from datetime import datetime, timezone
-import text
 
 genai.configure(api_key="AIzaSyCHUIiSPaTTDC8-1WEf8YkQi8dYNUVgzjU")
 model = genai.GenerativeModel("gemini-1.5-flash")
