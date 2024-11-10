@@ -3,22 +3,29 @@ from chromadb.config import Settings
 from google.oauth2 import service_account
 import google.generativeai as genai
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from pymongo import MongoClient
 import uuid
 from datetime import datetime, timezone
-
-from prompts import contextualize, qbotprompt
+from langchain_openai import ChatOpenAI
+import os
 # import text
 
 genai.configure(api_key="AIzaSyCHUIiSPaTTDC8-1WEf8YkQi8dYNUVgzjU")
 model = genai.GenerativeModel("gemini-1.5-flash")
 
-credentials = service_account.Credentials.from_service_account_file("C:/Users/Gopi/Desktop/chatbot/scrape_api/sapient-flare-414821-67e257076a0d.json")
-embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", credentials=credentials)
-#embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+os.environ["OPENAI_API_KEY"] = "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"
+llm = ChatOpenAI(model='gpt-4o-mini')
+
+# credentials = service_account.Credentials.from_service_account_file("C:/Users/Gopi/Desktop/chatbot/scrape_api/sapient-flare-414821-67e257076a0d.json")
+# embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", credentials=credentials)
+embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 # client = chromadb.Client(Settings())  # Using default settings for local storage
 client = chromadb.PersistentClient(path="C:/Users/Gopi/Desktop/chatbot/new/")
+
+mongoclient = MongoClient("mongodb+srv://anand0123:Qwer1234@chatbotcluster.jvkun.mongodb.net/chatbot?retryWrites=true&w=majority&appName=ChatbotCluster")
+db = mongoclient.chatbot
 
 
 def chunk_text(text, chunk_size=200):
@@ -45,9 +52,6 @@ def store_text(text):
         return website_id
 
 def store_chat_history(question, answer, userid, chatbotid):
-    client = MongoClient("mongodb+srv://anand0123:Qwer1234@chatbotcluster.jvkun.mongodb.net/chatbot?retryWrites=true&w=majority&appName=ChatbotCluster")
-    db = client.chatbot
-
     chat_data = {
         "userId": userid,
         "chatbotId": chatbotid,
@@ -71,27 +75,28 @@ def query_bot(prompt,id):
         for i in range(n_results):
             similar_text=similar_text+results['documents'][0][i]
             # print(similar_text)
-        response = model.generate_content(similar_text+ qbotprompt + prompt)
-        return response.text
+        response = llm.invoke(similar_text+"If at all i ask you how you got these information act smart and say you know everything. Prompt: "+prompt)
+        return response.content
     except KeyError as e:
         return f"Error: Collection '{id}' not found in Chroma DB. {e}"
     
 def chat_history(userid, chatbotid):
-    client = MongoClient("mongodb+srv://anand0123:Qwer1234@chatbotcluster.jvkun.mongodb.net/chatbot?retryWrites=true&w=majority&appName=ChatbotCluster")
-    db = client.chatbot
     chats = bool(db.chats.find_one({"chatbotId": chatbotid}))
     if chats:
-        chat_history = list(db.chats.find({"userId": userid, "chatbotId": chatbotid}).sort("createdAt", 1))
-        history_list = [entry['data'] for entry in chat_history]
+        history_list = list(db.chats.aggregate([
+            {"$match": {"userId": userid, "chatbotId": chatbotid}},
+            {"$sort": {"createdAt": 1}},
+            {"$project": {"_id": 0, "data": 1}}
+        ]))
         return history_list
     return None
     
 def properresponse(question, userid, chatbotid):
     history_list = chat_history(userid, chatbotid)
     if history_list:
-        history_text = "\n".join([f"User: {entry['user']}\nBot: {entry['bot']}" for entry in history_list])
-        response = model.generate_content(contextualize+f"Chat History:\n{history_text}\nQuery: {question}")
-        response = response.text
+        history_text = "\n".join([f"User: {entry['data']['user']}\nBot: {entry['data']['bot']}" for entry in history_list])
+        response = llm.invoke("Make a new contextualized query for me with the given chat history.Add every piece of context in the new query.No cross question,just the query"+f"Chat History:\n{history_text}\nQuery: {question}")
+        response = response.content
     else:
         response = question
     result = query_bot(response, chatbotid)
@@ -101,10 +106,10 @@ def properresponse(question, userid, chatbotid):
 def notification(userid, chatbotid):
     history_list = chat_history(userid, chatbotid)
     if history_list:
-        history_text = "\n".join([f"User: {entry['user']}\nBot: {entry['bot']}" for entry in history_list])
-        response = model.generate_content(f"Chat History:\n{history_text}\n\nBased on this chat history, provide a helpful message to encourage the user to continue chatting. Respond only with the message.")
-        return history_list, response.text
-    return [], ''
+        history_text = "\n".join([f"User: {entry['data']['user']}\nBot: {entry['data']['bot']}" for entry in history_list[-5:]])
+        response = llm.invoke(f"Chat History:\n{history_text}\n\nBased on this chat history, provide a helpful message to encourage the user to continue chatting. Respond only with the message.")
+        return {"data": history_list, "response": response.content}
+    return {"data": None}
 
 
 # print(store_text(text.text))
