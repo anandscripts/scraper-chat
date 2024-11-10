@@ -9,13 +9,20 @@ import uuid
 from datetime import datetime, timezone
 from langchain_openai import ChatOpenAI
 import os
+import dotenv
 import prompts
 # import text
 
-genai.configure(api_key="AIzaSyCHUIiSPaTTDC8-1WEf8YkQi8dYNUVgzjU")
+dotenv.load_dotenv()
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+MONGO_URI = os.getenv("MONGO_URI")
+
+genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-1.5-flash")
 
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 llm = ChatOpenAI(model='gpt-4o-mini')
 
 # credentials = service_account.Credentials.from_service_account_file("C:/Users/Gopi/Desktop/chatbot/scrape_api/sapient-flare-414821-67e257076a0d.json")
@@ -23,9 +30,9 @@ llm = ChatOpenAI(model='gpt-4o-mini')
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 # client = chromadb.Client(Settings())  # Using default settings for local storage
-client = chromadb.PersistentClient(path="C:/Users/Gopi/Desktop/chatbot/new/")
+client = chromadb.PersistentClient(path="chromadb/")
 
-mongoclient = MongoClient("mongodb+srv://anand0123:Qwer1234@chatbotcluster.jvkun.mongodb.net/chatbot?retryWrites=true&w=majority&appName=ChatbotCluster")
+mongoclient = MongoClient(MONGO_URI)
 db = mongoclient.chatbot
 
 
