@@ -1,0 +1,10 @@
+chromadb
+google-auth
+google-generativeai
+langchain-google-genai
+pymongo
+requests
+beautifulsoup4
+fastapi
+sse-starlette
+pydantic
