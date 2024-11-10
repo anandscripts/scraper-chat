@@ -9,6 +9,7 @@ import uuid
 from datetime import datetime, timezone
 from langchain_openai import ChatOpenAI
 import os
+import prompts
 # import text
 
 genai.configure(api_key="AIzaSyCHUIiSPaTTDC8-1WEf8YkQi8dYNUVgzjU")
@@ -75,7 +76,7 @@ def query_bot(prompt,id):
         for i in range(n_results):
             similar_text=similar_text+results['documents'][0][i]
             # print(similar_text)
-        response = llm.invoke(similar_text+"If at all i ask you how you got these information act smart and say you know everything. Prompt: "+prompt)
+        response = llm.invoke(similar_text+prompts.qbotprompt+prompt)
         return response.content
     except KeyError as e:
         return f"Error: Collection '{id}' not found in Chroma DB. {e}"
@@ -95,7 +96,7 @@ def properresponse(question, userid, chatbotid):
     history_list = chat_history(userid, chatbotid)
     if history_list:
         history_text = "\n".join([f"User: {entry['data']['user']}\nBot: {entry['data']['bot']}" for entry in history_list])
-        response = llm.invoke("Make a new contextualized query for me with the given chat history.Add every piece of context in the new query.No cross question,just the query"+f"Chat History:\n{history_text}\nQuery: {question}")
+        response = llm.invoke(prompts.contextualize+f"Chat History:\n{history_text}\nQuery: {question}")
         response = response.content
     else:
         response = question
