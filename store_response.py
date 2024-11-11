@@ -98,3 +98,13 @@ def notification(userid, chatbotid):
         response = llm.invoke(f"Chat History:\n{history_text}\n\nBased on this chat history, provide a helpful message to encourage the user to continue chatting. Respond only with the message.")
         return {"data": history_list, "response": response.content}
     return {"data": None}
+
+def store_lead_info(user_id, chatbot_id, lead_number, lead_name):
+    leads_collection = db["leads"]
+    lead_data = {
+        "user_id": user_id,
+        "chatbot_id": chatbot_id,
+        "lead_number": lead_number,
+        "lead_name": lead_name
+    }
+    result = leads_collection.insert_one(lead_data)
