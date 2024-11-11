@@ -61,7 +61,7 @@ def query_bot(query, id):
 
         page_contents = "\n\n".join([doc.page_content for doc in docs])
         print(page_contents)
-        response = llm.invoke(f'Document:\n"{page_contents}"\n'+prompts.qbotprompt_new+query)
+        response = llm.invoke(f'Document:\n"{page_contents}"\n'+prompts.qbotprompt_template+query)
         return response.content
 
     except KeyError as e:
