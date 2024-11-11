@@ -5,9 +5,8 @@ from fastapi.responses import JSONResponse
 import asyncio
 from pydantic import BaseModel
 from typing import List
-from scrape_links import scrape_links
-from scrape_text import scrape_text
-from store_response import store_text, properresponse, notification
+from scrape_links import scrape_links, scrape_text
+from store_response import store_text, proper_query, notification
 
 app = FastAPI()
 
@@ -46,7 +45,7 @@ class ResponseRequest(BaseModel):
 
 @app.post('/chatresponse')
 async def response(request: ResponseRequest):
-    result = properresponse(request.question, request.userid, request.chatbotid)
+    result = proper_query(request.question, request.userid, request.chatbotid)
     return {"data": result}
 
 @app.get('/chathistory')
@@ -56,3 +55,5 @@ async def history(request: Request, userid: str, chatbotid: str):
 @app.get("/")
 async def hello():
     return JSONResponse(content={"response": "Hello!"})
+
+# uvicorn app:app --host 192.168.0.100 --port 5001 --reload
