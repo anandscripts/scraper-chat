@@ -51,13 +51,13 @@ def query_bot(query, id):
     try:
         db = Chroma(persist_directory=CHROMA_PATH, embedding_function=embeddings, collection_name=id)
 
-        # embedding = embeddings.embed_query(query)
-        # docs = db.similarity_search_by_vector(embedding, k=3)  
+        embedding = embeddings.embed_query(query)
+        docs = db.similarity_search_by_vector(embedding, k=3)  
 
-        retriever = db.as_retriever(
-            search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.1}
-        )
-        docs = retriever.invoke(query)
+        #retriever = db.as_retriever(
+        #    search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.1}
+        #)
+        #docs = retriever.invoke(query)
 
         page_contents = "\n\n".join([doc.page_content for doc in docs])
         print(page_contents)
