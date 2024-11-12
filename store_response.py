@@ -65,7 +65,7 @@ def query_bot(query, id):
         # docs = db.max_marginal_relevance_search(query)
 
         page_contents = "\n\n".join([doc.page_content for doc in docs])
-        print(page_contents)
+
         response = llm.invoke(f'Document:\n"{page_contents}"\n'+prompts.qbotprompt_new+query)
         return response.content
 
@@ -112,7 +112,6 @@ def proper_query(question, userid, chatbotid):
         response = response.content
     else:
         response = question
-    print(response)
     result = query_bot(response, chatbotid)
     store_chat_history(question, result, userid, chatbotid)
     return result
