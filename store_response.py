@@ -42,7 +42,7 @@ def store_chat_history(question, answer, userid, chatbotid):
             "user": question,
             "bot": answer
         },
-        "createdAt": datetime.now(timezone.utc)  # Store the current timestamp
+        "createdAt": datetime.now(timezone.utc) 
     }
     db.chats.insert_one(chat_data)
 
