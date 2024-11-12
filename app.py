@@ -54,6 +54,10 @@ async def response(request: ResponseRequest):
 async def history(request: Request, userid: str, chatbotid: str):
     return notification(userid, chatbotid)
 
+@api2_router.get('/chatactivity')
+async def activity(request: Request, chatbotid: str):
+    return chat_activity(chatbotid)
+    
 @api2_router.get("/")
 async def hello():
     return JSONResponse(content={"response": "Hello!"})
