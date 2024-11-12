@@ -59,10 +59,10 @@ def query_bot(query, id):
         #)
         #docs = retriever.invoke(query)
 
-        retriever = db.as_retriever()
-        docs = retriever.invoke(query)
+        # retriever = db.as_retriever()
+        # docs = retriever.invoke(query)
 
-        # docs = db.max_marginal_relevance_search(query)
+        docs = db.max_marginal_relevance_search(query)
 
         page_contents = "\n\n".join([doc.page_content for doc in docs])
 
