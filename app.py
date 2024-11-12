@@ -6,7 +6,7 @@ import asyncio
 from pydantic import BaseModel
 from typing import List
 from scrape_links import scrape_links, scrape_text
-from store_response import store_text, proper_query, notification
+from store_response import store_text, proper_query, notification, chat_activity
 
 app = FastAPI()
 
