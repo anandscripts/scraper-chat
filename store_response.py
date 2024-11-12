@@ -10,7 +10,7 @@ import os
 import prompts
 
 CHROMA_PATH = "store_path"
-
+# hhh
 dotenv.load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
