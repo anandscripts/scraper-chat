@@ -62,22 +62,45 @@ def query_bot(query, id):
         retriever = db.as_retriever()
         docs = retriever.invoke(query)
 
+        # docs = db.max_marginal_relevance_search(query)
+
         page_contents = "\n\n".join([doc.page_content for doc in docs])
         print(page_contents)
-        response = llm.invoke(f'Document:\n"{page_contents}"\n'+prompts.qbotprompt_template+query)
+        response = llm.invoke(f'Document:\n"{page_contents}"\n'+prompts.qbotprompt_new+query)
         return response.content
 
     except KeyError as e:
         return f"Error: Collection '{id}' not found in Chroma DB. {e}"
     
 def chat_history(userid, chatbotid):
-    chats = bool(db.chats.find_one({"chatbotId": chatbotid}))
-    if chats:
-        history_list = list(db.chats.aggregate([
+    history_list = list(db.chats.aggregate([
             {"$match": {"userId": userid, "chatbotId": chatbotid}},
             {"$sort": {"createdAt": 1}},
             {"$project": {"_id": 0, "data": 1}}
         ]))
+    if history_list:
+        return history_list
+    return None
+
+def chat_activity(chatbotid):
+    history_list = list(db.chats.aggregate([
+        {"$match": {"chatbotId": chatbotid}},
+        {"$sort": {"createdAt": 1}},
+        {"$project": {"_id": 1, "data": 1, "userId": 1}},  
+        {
+            "$group": {
+                "_id": "$userId",  
+                "messages": {
+                    "$push": {
+                        "data": "$data",
+                        "objectId": {"$toString": "$_id"}  
+                    }
+                }
+            }
+        },
+        {"$project": {"_id": 0, "userId": "$_id", "messages": 1}}  
+    ]))
+    if history_list:
         return history_list
     return None
     
