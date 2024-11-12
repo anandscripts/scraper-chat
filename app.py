@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from sse_starlette import EventSourceResponse
 from fastapi.responses import JSONResponse
@@ -6,9 +6,11 @@ import asyncio
 from pydantic import BaseModel
 from typing import List
 from scrape_links import scrape_links, scrape_text
-from store_response import store_text, proper_query, notification
+from store_response2 import store_text, proper_query, notification
 
 app = FastAPI()
+
+api2_router = APIRouter()
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,7 +20,7 @@ app.add_middleware(
     allow_headers=["*"], 
 )
 
-@app.get("/links")
+@api2_router.get("/links")
 async def scrape(request: Request, url: str):
     visited_links = set()
 
@@ -31,7 +33,7 @@ async def scrape(request: Request, url: str):
 class LinksRequest(BaseModel):
     links: List[str]
 
-@app.post("/scrape")
+@api2_router.post("/scrape")
 async def scrape(request: LinksRequest):
     links = request.links  # This will get the links from the body
     text_data = scrape_text(links)  
@@ -43,17 +45,19 @@ class ResponseRequest(BaseModel):
     userid: str
     chatbotid: str
 
-@app.post('/chatresponse')
+@api2_router.post('/chatresponse')
 async def response(request: ResponseRequest):
     result = proper_query(request.question, request.userid, request.chatbotid)
     return {"data": result}
 
-@app.get('/chathistory')
+@api2_router.get('/chathistory')
 async def history(request: Request, userid: str, chatbotid: str):
     return notification(userid, chatbotid)
 
-@app.get("/")
+@api2_router.get("/")
 async def hello():
     return JSONResponse(content={"response": "Hello!"})
 
-# uvicorn app:app --host 192.168.0.100 --port 5001 --reload
+app.include_router(api2_router, prefix='/chatlaps')
+
+# uvicorn api2_router:api2_router --host 192.168.0.100 --port 5001 --reload
