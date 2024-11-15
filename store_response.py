@@ -1,7 +1,9 @@
 import uuid
-from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+# from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_chroma import Chroma
+# from langchain_chroma import Chroma
+from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI
 from pymongo import MongoClient
 from datetime import datetime, timezone
@@ -10,7 +12,8 @@ import os
 import prompts
 
 CHROMA_PATH = "store_path"
-# hhh
+FAISS_PATH = "store_faiss"
+
 dotenv.load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -20,7 +23,8 @@ MONGO_URI = os.getenv("MONGO_URI")
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 llm = ChatOpenAI(model='gpt-4o-mini')
 
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+# embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+embeddings = OpenAIEmbeddings(model="text-embedding-3-small", api_key=OPENAI_API_KEY)
 
 mongoclient = MongoClient(MONGO_URI)
 db = mongoclient.chatbot
@@ -28,10 +32,12 @@ db = mongoclient.chatbot
 def store_text(text):
     website_id = str(uuid.uuid4())
 
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=250, chunk_overlap=20)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=600, chunk_overlap=20)
     text_chunks = text_splitter.split_documents(text)
 
-    Chroma.from_documents(text_chunks, embeddings, persist_directory=CHROMA_PATH, collection_name=website_id)
+    # Chroma.from_documents(text_chunks, embeddings, persist_directory=CHROMA_PATH, collection_name=website_id)
+    db = FAISS.from_documents(text_chunks, embeddings)
+    db.save_local(folder_path=FAISS_PATH, index_name=website_id)
     return website_id
 
 def store_chat_history(question, answer, userid, chatbotid):
@@ -47,26 +53,31 @@ def store_chat_history(question, answer, userid, chatbotid):
     db.chats.insert_one(chat_data)
 
 
-def query_bot(query, id):
+def query_bot(history, contextualized_question, user_query, id):
     try:
-        db = Chroma(persist_directory=CHROMA_PATH, embedding_function=embeddings, collection_name=id)
+        # db = Chroma(persist_directory=CHROMA_PATH, embedding_function=embeddings, collection_name=id)
+        db = FAISS.load_local(FAISS_PATH, embeddings, id, allow_dangerous_deserialization=True)
 
-        # embedding = embeddings.embed_query(query)
-        # docs = db.similarity_search_by_vector(embedding, k=3)  
+        # Retriever 1
+        embedding = embeddings.embed_query(contextualized_question)
+        docs = db.similarity_search_by_vector(embedding, k=3)  
 
+        # Retriever 2
         #retriever = db.as_retriever(
         #    search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.1}
         #)
-        #docs = retriever.invoke(query)
+        #docs = retriever.invoke(contextualized_question)
 
+        # Retriever 3
         # retriever = db.as_retriever()
-        # docs = retriever.invoke(query)
+        # docs = retriever.invoke(contextualized_question)
 
-        docs = db.max_marginal_relevance_search(query)
+        # Retriever 4
+        # docs = db.max_marginal_relevance_search(contextualized_question)
 
         page_contents = "\n\n".join([doc.page_content for doc in docs])
 
-        response = llm.invoke(f'Document:\n"{page_contents}"\n'+prompts.qbotprompt_template+query)
+        response = llm.invoke(f'History:\n"{history}"\n\nDocuments:\n"{page_contents}"\n'+prompts.qbotprompt_new+user_query)
         return response.content
 
     except KeyError as e:
@@ -109,10 +120,11 @@ def proper_query(question, userid, chatbotid):
     if history_list:
         history_text = "\n".join([f"User: {entry['data']['user']}\nBot: {entry['data']['bot']}" for entry in history_list])
         response = llm.invoke(f"Chat History:\n{history_text}\nUser Query: {question}\n"+prompts.contextualize_new)
-        response = response.content
+        contextualized_question = response.content
     else:
-        response = question
-    result = query_bot(response, chatbotid)
+        history_text = "No Previous Conversation"
+        contextualized_question = question
+    result = query_bot(history_text, contextualized_question, question, chatbotid)
     store_chat_history(question, result, userid, chatbotid)
     return result
 
@@ -124,12 +136,18 @@ def notification(userid, chatbotid):
         return {"data": history_list, "response": response.content}
     return {"data": None}
 
-def store_lead_info(user_id, chatbot_id, lead_number, lead_name):
-    leads_collection = db["leads"]
-    lead_data = {
-        "user_id": user_id,
-        "chatbot_id": chatbot_id,
-        "lead_number": lead_number,
-        "lead_name": lead_name
-    }
-    result = leads_collection.insert_one(lead_data)
+def store_lead_info(userid, chatbotid, name=None, number=None, purpose=None, requirement=None):
+    collection = db['user_requests'] 
+    try:
+        lead_info = {}
+        if userid: lead_info["userid"] = userid
+        if chatbotid: lead_info["chatbotid"] = chatbotid
+        if name: lead_info["name"] = name
+        if number: lead_info["number"] = number
+        if purpose: lead_info["purpose"] = purpose
+        if requirement: lead_info["requirements"] = requirement
+
+        result = collection.insert_one(lead_info)
+        return str(result.inserted_id)
+    except Exception as e:
+        return f"An error occured: {str(e)}"
