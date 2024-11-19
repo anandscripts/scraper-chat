@@ -1,7 +1,8 @@
 from urllib.parse import urljoin, urlparse, urldefrag
 import requests
 from bs4 import BeautifulSoup
-from langchain_community.document_loaders import UnstructuredURLLoader
+from langchain_community.document_loaders import SeleniumURLLoader
+from langchain.schema import Document
 
 # Scrape Links
 async def scrape_links(url, visited=None):
@@ -41,7 +42,10 @@ async def scrape_links(url, visited=None):
         yield f"Error occurred while fetching the webpage: {e}\n"
 
 # Scrape Text as Documents
-def scrape_text(links_list):
-    loader = UnstructuredURLLoader(links_list)
-    docs = loader.load()
+def scrape_text(data):
+    if type(data) == list:
+        loader = SeleniumURLLoader(data)
+        docs = loader.load()
+    elif type(data) == str:
+        docs = [Document(page_content=data)]
     return docs

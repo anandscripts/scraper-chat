@@ -40,6 +40,16 @@ async def scrape(request: LinksRequest):
     collection_id = store_text(text_data)
     return {"chatbotId": collection_id}
 
+class TextRequest(BaseModel):
+    textData: str
+
+@api2_router.post("/texttrain")
+async def scrape(request: TextRequest):
+    text = request.textData  
+    text_data = scrape_text(text)  
+    collection_id = store_text(text_data)
+    return {"chatbotId": collection_id}
+
 class ResponseRequest(BaseModel):
     question: str
     userid: str
