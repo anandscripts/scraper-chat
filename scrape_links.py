@@ -1,7 +1,7 @@
 from urllib.parse import urljoin, urlparse, urldefrag
 import requests
 from bs4 import BeautifulSoup
-from langchain_community.document_loaders import SeleniumURLLoader
+from langchain_community.document_loaders import UnstructuredURLLoader
 from langchain.schema import Document
 
 # Scrape Links
@@ -44,7 +44,7 @@ async def scrape_links(url, visited=None):
 # Scrape Text as Documents
 def scrape_text(data):
     if type(data) == list:
-        loader = SeleniumURLLoader(data)
+        loader = UnstructuredURLLoader(data)
         docs = loader.load()
     elif type(data) == str:
         docs = [Document(page_content=data)]
