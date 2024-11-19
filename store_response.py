@@ -59,14 +59,14 @@ def query_bot(history, contextualized_question, user_query, id):
         db = FAISS.load_local(FAISS_PATH, embeddings, id, allow_dangerous_deserialization=True)
 
         # Retriever 1
-        embedding = embeddings.embed_query(contextualized_question)
-        docs = db.similarity_search_by_vector(embedding, k=3)  
+        # embedding = embeddings.embed_query(contextualized_question)
+        # docs = db.similarity_search_by_vector(embedding, k=3)  
 
         # Retriever 2
-        #retriever = db.as_retriever(
-        #    search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.1}
-        #)
-        #docs = retriever.invoke(contextualized_question)
+        retriever = db.as_retriever(
+           search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.7}
+        )
+        docs = retriever.invoke(contextualized_question)
 
         # Retriever 3
         # retriever = db.as_retriever()
