@@ -32,7 +32,7 @@ db = mongoclient.chatbot
 def store_text(text):
     website_id = str(uuid.uuid4())
 
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=600, chunk_overlap=20)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=275, chunk_overlap=50)
     text_chunks = text_splitter.split_documents(text)
 
     # Chroma.from_documents(text_chunks, embeddings, persist_directory=CHROMA_PATH, collection_name=website_id)
