@@ -77,7 +77,7 @@ def query_bot(history, contextualized_question, user_query, id):
 
         page_contents = "\n\n".join([doc.page_content for doc in docs])
 
-        response = llm.invoke(f'History:\n"{history}"\n\nDocuments:\n"{page_contents}"\n'+prompts.qbotprompt_new+user_query)
+        response = llm.invoke(f'History:\n"{history}"\n\nDocuments:\n"{page_contents}"\n'+prompts.qbotprompt_template+user_query)
         return response.content
 
     except KeyError as e:
