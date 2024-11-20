@@ -46,7 +46,8 @@ class TextRequest(BaseModel):
 @api2_router.post("/texttrain")
 async def scrape(request: TextRequest):
     text = request.textData  
-    collection_id = store_text(text)
+    text_data = scrape_text(text)  
+    collection_id = store_text(text_data)
     return {"chatbotId": collection_id}
 
 class ResponseRequest(BaseModel):
