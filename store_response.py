@@ -2,8 +2,8 @@ import uuid
 # from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-# from langchain_chroma import Chroma
-from langchain_community.vectorstores import FAISS
+from langchain_chroma import Chroma
+# from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI
 from pymongo import MongoClient
 from datetime import datetime, timezone
@@ -11,7 +11,7 @@ import dotenv
 import os
 import prompts
 
-CHROMA_PATH = "store_path"
+CHROMA_PATH = "store_chroma"
 FAISS_PATH = "store_faiss"
 
 dotenv.load_dotenv()
@@ -32,12 +32,12 @@ db = mongoclient.chatbot
 def store_text(text):
     website_id = str(uuid.uuid4())
 
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=275, chunk_overlap=50)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
     text_chunks = text_splitter.split_documents(text)
 
-    # Chroma.from_documents(text_chunks, embeddings, persist_directory=CHROMA_PATH, collection_name=website_id)
-    db = FAISS.from_documents(text_chunks, embeddings)
-    db.save_local(folder_path=FAISS_PATH, index_name=website_id)
+    Chroma.from_documents(text_chunks, embeddings, persist_directory=CHROMA_PATH, collection_name=website_id)
+    # db = FAISS.from_documents(text_chunks, embeddings)
+    # db.save_local(folder_path=FAISS_PATH, index_name=website_id)
     return website_id
 
 def store_chat_history(question, answer, userid, chatbotid):
@@ -55,29 +55,29 @@ def store_chat_history(question, answer, userid, chatbotid):
 
 def query_bot(history, contextualized_question, user_query, id):
     try:
-        # db = Chroma(persist_directory=CHROMA_PATH, embedding_function=embeddings, collection_name=id)
-        db = FAISS.load_local(FAISS_PATH, embeddings, id, allow_dangerous_deserialization=True)
+        db = Chroma(persist_directory=CHROMA_PATH, embedding_function=embeddings, collection_name=id)
+        # db = FAISS.load_local(FAISS_PATH, embeddings, id, allow_dangerous_deserialization=True)
 
         # Retriever 1
         # embedding = embeddings.embed_query(contextualized_question)
         # docs = db.similarity_search_by_vector(embedding, k=3)  
 
         # Retriever 2
-        retriever = db.as_retriever(
-           search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.7}
-        )
-        docs = retriever.invoke(contextualized_question)
+        # retriever = db.as_retriever(
+        #    search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.1}
+        # )
+        # docs = retriever.invoke(contextualized_question)
 
         # Retriever 3
-        # retriever = db.as_retriever()
-        # docs = retriever.invoke(contextualized_question)
+        retriever = db.as_retriever()
+        docs = retriever.invoke(contextualized_question)
 
         # Retriever 4
         # docs = db.max_marginal_relevance_search(contextualized_question)
 
         page_contents = "\n\n".join([doc.page_content for doc in docs])
 
-        response = llm.invoke(f'History:\n"{history}"\n\nDocuments:\n"{page_contents}"\n'+prompts.qbotprompt_template+user_query)
+        response = llm.invoke(f'History:\n"{history}"\n\nDocuments:\n"{page_contents}"\n'+prompts.qbotprompt_new+user_query)
         return response.content
 
     except KeyError as e:
