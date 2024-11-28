@@ -6,6 +6,7 @@ from langchain_chroma import Chroma
 # from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI
 from pymongo import MongoClient
+# from bson import ObjectId
 from datetime import datetime, timezone
 import dotenv
 import os
@@ -127,11 +128,14 @@ def proper_query(question, userid, chatbotid):
     store_chat_history(question, result, userid, chatbotid)
     return result
 
+
 def chatbot_details(chatbotid):
+    temp = []
     history = db.Chatbot.find_one({"chatbotId": chatbotid})
     if history:
-        history['_id'] = str(history['_id'])
-    return history
+        temp.append(history)
+        return temp
+    return None
 
 def notification(userid, chatbotid):
     chatbot_detail = chatbot_details(chatbotid)
