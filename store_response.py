@@ -40,14 +40,13 @@ def store_text(text):
     # db.save_local(folder_path=FAISS_PATH, index_name=website_id)
     return website_id
 
+
 def store_chat_history(question, answer, userid, chatbotid):
     chat_data = {
         "userId": userid,
         "chatbotId": chatbotid,
-        "data": {
-            "user": question,
-            "bot": answer
-        },
+        "user": question,
+        "bot": answer,
         "createdAt": datetime.now(timezone.utc) 
     }
     db.chats.insert_one(chat_data)
@@ -76,7 +75,6 @@ def query_bot(history, contextualized_question, user_query, id):
         # docs = db.max_marginal_relevance_search(contextualized_question)
 
         page_contents = "\n\n".join([doc.page_content for doc in docs])
-
         response = llm.invoke(f'History:\n"{history}"\n\nDocuments:\n"{page_contents}"\n'+prompts.qbotprompt_new+user_query)
         return response.content
 
@@ -87,23 +85,24 @@ def chat_history(userid, chatbotid):
     history_list = list(db.chats.aggregate([
             {"$match": {"userId": userid, "chatbotId": chatbotid}},
             {"$sort": {"createdAt": 1}},
-            {"$project": {"_id": 0, "data": 1}}
+            {"$project": {"_id": 0,"user":1,"bot":1}}
         ]))
     if history_list:
         return history_list
     return None
-
+  
 def chat_activity(chatbotid):
     history_list = list(db.chats.aggregate([
         {"$match": {"chatbotId": chatbotid}},
         {"$sort": {"createdAt": 1}},
-        {"$project": {"_id": 1, "data": 1, "userId": 1}},  
+        {"$project": {"_id": 1, "user":1,"bot":1, "userId": 1}},  
         {
             "$group": {
                 "_id": "$userId",  
                 "messages": {
                     "$push": {
-                        "data": "$data",
+                        "user": "$user",
+                        "bot": "$bot",
                         "objectId": {"$toString": "$_id"}  
                     }
                 }
@@ -118,7 +117,7 @@ def chat_activity(chatbotid):
 def proper_query(question, userid, chatbotid):
     history_list = chat_history(userid, chatbotid)
     if history_list:
-        history_text = "\n".join([f"User: {entry['data']['user']}\nBot: {entry['data']['bot']}" for entry in history_list])
+        history_text = "\n".join([f"User: {entry['user']}\nBot: {entry['bot']}" for entry in history_list])
         response = llm.invoke(f"Chat History:\n{history_text}\nUser Query: {question}\n"+prompts.contextualize_new)
         contextualized_question = response.content
     else:
@@ -131,7 +130,7 @@ def proper_query(question, userid, chatbotid):
 def notification(userid, chatbotid):
     history_list = chat_history(userid, chatbotid)
     if history_list:
-        history_text = "\n".join([f"User: {entry['data']['user']}\nBot: {entry['data']['bot']}" for entry in history_list[-5:]])
+        history_text = "\n".join([f"User: {entry['user']}\nBot: {entry['bot']}" for entry in history_list[-5:]])
         response = llm.invoke(f"Chat History:\n{history_text}\n\nBased on this chat history, provide a helpful message to encourage the user to continue chatting. Respond only with the message.")
         return {"data": history_list, "response": response.content}
     return {"data": None}
