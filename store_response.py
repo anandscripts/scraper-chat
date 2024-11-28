@@ -136,6 +136,7 @@ def notification(userid, chatbotid):
     print(chatbot_detail)
     if chatbot_detail:
         history_list = chat_history(userid, chatbotid)
+        print(history_list)
         if history_list:
             history_text = "\n".join([f"User: {entry['user']}\nBot: {entry['bot']}" for entry in history_list[-5:]])
             response = llm.invoke(f"Chat History:\n{history_text}\n\nBased on this chat history, provide a helpful message to encourage the user to continue chatting. Respond only with the message.")
