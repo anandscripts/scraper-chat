@@ -129,7 +129,7 @@ def proper_query(question, userid, chatbotid):
     return result
 
 def chatbot_details(chatbotid):
-    history = db.Chatbot.find_one({"chatbotId": chatbotid}, {"_id": 0})
+    history = db.Chatbot.find_one({"chatbotId": chatbotid}, {"_id": 0, "userid": 0})
     return history
 
 def notification(userid, chatbotid):
