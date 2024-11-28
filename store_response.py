@@ -133,6 +133,7 @@ def chatbot_details(chatbotid):
 
 def notification(userid, chatbotid):
     chatbot_detail = chatbot_details(chatbotid)
+    print(chatbot_detail)
     if chatbot_detail:
         history_list = chat_history(userid, chatbotid)
         if history_list:
