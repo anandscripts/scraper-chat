@@ -132,14 +132,14 @@ def chatbot_details(chatbotid):
     return history
 
 def notification(userid, chatbotid):
-    chatbot_details = chatbot_details(chatbotid)
-    if chatbot_details:
+    chatbot_detail = chatbot_details(chatbotid)
+    if chatbot_detail:
         history_list = chat_history(userid, chatbotid)
         if history_list:
             history_text = "\n".join([f"User: {entry['user']}\nBot: {entry['bot']}" for entry in history_list[-5:]])
             response = llm.invoke(f"Chat History:\n{history_text}\n\nBased on this chat history, provide a helpful message to encourage the user to continue chatting. Respond only with the message.")
-            return {"data": history_list, "response": response.content, "details": chatbot_details}
-        return {"data": None, "details": chatbot_details}
+            return {"data": history_list, "response": response.content, "details": chatbot_detail}
+        return {"data": None, "details": chatbot_detail}
     return {"data": None}
 
 def store_lead_info(userid, chatbotid, name=None, number=None, purpose=None, requirement=None):
