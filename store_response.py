@@ -9,6 +9,7 @@ from pymongo import MongoClient
 from datetime import datetime, timezone
 import dotenv
 import os
+import app
 import prompts
 
 CHROMA_PATH = "store_chroma"
@@ -91,7 +92,7 @@ def query_bot(history, contextualized_question, user_query, id):
 
         page_contents = "\n\n".join([doc.page_content for doc in docs])
 
-        response = llm.invoke(f'History:\n"{history}"\n\nDocuments:\n"{page_contents}"\n'+prompts.qbotprompt_new+user_query)
+        response = llm.invoke(f'History:\n"{history}"\n\nDocuments:\n"{page_contents}"\n'+app.qbotpromptnew+user_query)
         return response.content
 
     except KeyError as e:
@@ -133,6 +134,7 @@ def proper_query(question, userid, chatbotid):
     history_list = chat_history(userid, chatbotid)
     if history_list:
         history_text = "\n".join([f"User: {entry['data']['user']}\nBot: {entry['data']['bot']}" for entry in history_list])
+
         response = llm.invoke(f"Chat History:\n{history_text}\nUser Query: {question}\n"+prompts.contextualize_new)
         contextualized_question = response.content
     else:

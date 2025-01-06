@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sse_starlette import EventSourceResponse
 from fastapi.responses import JSONResponse
 import asyncio
+import importlib
+import prompts
 from pydantic import BaseModel
 from typing import List
 from scrape_links import scrape_links, scrape_text
@@ -67,6 +69,27 @@ async def history(request: Request, userid: str, chatbotid: str):
 @api2_router.get('/chatactivity')
 async def activity(request: Request, chatbotid: str):
     return chat_activity(chatbotid)
+
+qbotpromptnew=prompts.qbotprompt_new
+
+def prompt_change(prompt:str):
+    global qbotpromptnew
+    qbotpromptnew=prompt
+    return {"message": f"Prompt updated successfully: {qbotpromptnew}"}
+
+class PromptRequest(BaseModel):
+    prompt:str
+
+@api2_router.put('/prompt')
+async def prompt(request:PromptRequest):
+    response = prompt_change(request.prompt)
+    return response
+
+@api2_router.get('/testy')
+async def get(request:PromptRequest):
+    hello=qbotpromptnew
+    return hello
+
 
 @api2_router.delete('/reset')
 async def delete_chat_historys(request: Request, chatbotid: str, userid: str = None):
