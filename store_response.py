@@ -40,6 +40,20 @@ def store_text(text):
     # db.save_local(folder_path=FAISS_PATH, index_name=website_id)
     return website_id
 
+def delete_chat_history(userid=None, chatbotid=None):
+    # Build the query filter
+    query = {}
+    if userid:
+        query['userId'] = userid
+    if chatbotid:
+        query['chatbotId'] = chatbotid
+
+    # Delete matching documents
+    result = db.chats.delete_many(query)
+    
+    # Print the result
+    print(f"{result.deleted_count} chat(s) deleted.")
+
 def store_chat_history(question, answer, userid, chatbotid):
     chat_data = {
         "userId": userid,

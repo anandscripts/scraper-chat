@@ -6,7 +6,7 @@ import asyncio
 from pydantic import BaseModel
 from typing import List
 from scrape_links import scrape_links, scrape_text
-from store_response import store_text, proper_query, notification, chat_activity
+from store_response import store_text, proper_query, notification, chat_activity, delete_chat_history
 
 app = FastAPI()
 
@@ -67,6 +67,11 @@ async def history(request: Request, userid: str, chatbotid: str):
 @api2_router.get('/chatactivity')
 async def activity(request: Request, chatbotid: str):
     return chat_activity(chatbotid)
+
+@api2_router.delete('/reset')
+async def delete_chat_historys(request: Request, chatbotid: str, userid: str = None):
+    return delete_chat_history(userid,chatbotid)
+
     
 @api2_router.get("/")
 async def hello():
