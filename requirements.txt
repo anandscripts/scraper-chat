@@ -7,5 +7,6 @@ langchain-text-splitters
 langchain-chroma
 langchain-huggingface
 langchain-openai
+openai
 pymongo
 faiss-cpu

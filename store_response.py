@@ -9,6 +9,8 @@ from pymongo import MongoClient
 from datetime import datetime, timezone
 import dotenv
 import os
+import openai
+import json
 import app
 import prompts
 
@@ -68,9 +70,9 @@ def store_chat_history(question, answer, userid, chatbotid):
     db.chats.insert_one(chat_data)
 
 
-def query_bot(history, contextualized_question, user_query, id):
+def query_bot(history, contextualized_question, user_query, chatbotid):
     try:
-        db = Chroma(persist_directory=CHROMA_PATH, embedding_function=embeddings, collection_name=id)
+        db = Chroma(persist_directory=CHROMA_PATH, embedding_function=embeddings, collection_name=chatbotid)
         # db = FAISS.load_local(FAISS_PATH, embeddings, id, allow_dangerous_deserialization=True)
 
         # Retriever 1
@@ -108,6 +110,23 @@ def chat_history(userid, chatbotid):
         return history_list
     return None
 
+
+def execute_function(function_name, parameters,userid,chatbotid):
+    """Dispatch and execute the appropriate function."""
+    if function_name == "store_lead_info":
+         return store_lead_info(
+            name=parameters.get("name", ""),
+            number=parameters.get("number", ""),
+            purpose=parameters.get("purpose", ""),
+            requirement=parameters.get("requirement", ""),
+            hist=parameters.get("hist", ""),
+            uinput=parameters.get("uinput", ""),
+            userid=userid,
+            chatbotid=chatbotid
+        )
+    else:
+        return {"error": "Unknown function called"}
+
 def chat_activity(chatbotid):
     history_list = list(db.chats.aggregate([
         {"$match": {"chatbotId": chatbotid}},
@@ -130,19 +149,73 @@ def chat_activity(chatbotid):
         return history_list
     return None
     
-def proper_query(question, userid, chatbotid):
-    history_list = chat_history(userid, chatbotid)
-    if history_list:
-        history_text = "\n".join([f"User: {entry['data']['user']}\nBot: {entry['data']['bot']}" for entry in history_list])
+# def proper_query(question, userid, chatbotid):
+#     history_list = chat_history(userid, chatbotid)
+#     if history_list:
+#         history_text = "\n".join([f"User: {entry['data']['user']}\nBot: {entry['data']['bot']}" for entry in history_list])
+#         response = llm.invoke(f"Chat History:\n{history_text}\nUser Query: {question}\n"+prompts.contextualize_new)
+#         contextualized_question = response.content
+#     else:
+#         history_text = "No Previous Conversation"
+#         contextualized_question = question
+#     result = query_bot(history_text, contextualized_question, question, chatbotid)
+#     store_chat_history(question, result, userid, chatbotid)
+#     return result
 
-        response = llm.invoke(f"Chat History:\n{history_text}\nUser Query: {question}\n"+prompts.contextualize_new)
-        contextualized_question = response.content
+def proper_query(user_input,userid, chatbotid):
+    history_list = chat_history(userid, chatbotid)
+    if not history_list:
+        history_list="No history available"
+    tools = [
+    {
+        "type": "function",
+        "function": {
+                    "name": "store_lead_info",
+                    "description": "Capture lead details (name, phone, purpose, requirements) and store them in the Mongo database.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string", "description": "Full name of the lead."},
+                            "phone": {"type": "string", "description": "Phone number of the lead, including country code."},
+                            "purpose": {"type": "string", "description": "The purpose of the lead"},
+                            "requirement": {"type": "string", "description": "Requirement of the lead"},
+                            "hist": {"type": "string", "description": "Chat history"},
+                            "uinput": {"type": "string", "description": "user input"},
+                        },
+                        "required": ["name", "phone", "purpose", "requirement","hist","uinput"]
+                    }
+                }
+    }
+    ]
+
+    response = openai.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[ 
+                {"role": "system", "content": "You are a helpful assistant and you have two jobs. 1)Given a chat history and the latest user question which might reference context in the chat history, formulate a contextualized standalone prompt which can be understood without the chat history, for RAG purposes.(Remove referential ambiguities by adding the reference from history) If it is in other language, translate the contextual query in English. Do NOT answer the user prompt, just reformulate it if needed and otherwise return it as is.2)Run the store_lead_info function when you have any of the parameters and still perform job "},#Given a chat history and the latest user question which might reference context in the chat history, formulate a contextualized standalone question which can be understood without the chat history. If it is in other language, translate the contextual query in English. Do NOT answer the user prompt, just reformulate it if needed and otherwise return it as is. Also if you have even one of the paramters for store_lead_info function call the function with other parameters as ''.even if you run the function answer the user prompt as well #You are a helpful assistant that can decide on executing functions based on user requests
+                {"role": "user", "content": "Chat History:  " + str(history_list) + " User Prompt: " + user_input}
+            ],
+            tools=tools,
+            tool_choice="auto"
+            )
+
+    tool_calls = response.choices[0].message.tool_calls
+    if tool_calls:
+        for tool_call in tool_calls:
+            #print(tool_call)
+            if tool_call.function.name=="store_lead_info":
+                function_name = tool_call.function.name
+                parameters = eval(tool_call.function.arguments)  # Safely parse arguments
+                result = execute_function(function_name, parameters,userid,chatbotid)
+                #print(f"Function executed: {function_name}, Result: {result}")
+                break
     else:
-        history_text = "No Previous Conversation"
-        contextualized_question = question
-    result = query_bot(history_text, contextualized_question, question, chatbotid)
-    store_chat_history(question, result, userid, chatbotid)
+        result=response.choices[0].message.content
+    result=query_bot(str(history_list),result,user_input,chatbotid)
+    store_chat_history(user_input, result, userid, chatbotid)
     return result
+    #bot_response = response.choices[0].message.content
+    #return bot_response
+
 
 def notification(userid, chatbotid):
     history_list = chat_history(userid, chatbotid)
@@ -152,18 +225,47 @@ def notification(userid, chatbotid):
         return {"data": history_list, "response": response.content}
     return {"data": None}
 
-def store_lead_info(userid, chatbotid, name=None, number=None, purpose=None, requirement=None):
-    collection = db['user_requests'] 
-    try:
-        lead_info = {}
-        if userid: lead_info["userid"] = userid
-        if chatbotid: lead_info["chatbotid"] = chatbotid
-        if name: lead_info["name"] = name
-        if number: lead_info["number"] = number
-        if purpose: lead_info["purpose"] = purpose
-        if requirement: lead_info["requirements"] = requirement
+# def store_lead_info(userid, chatbotid, name=None, number=None, purpose=None, requirement=None):
+#     collection = db['user_requests'] 
+#     try:
+#         lead_info = {}
+#         if userid: lead_info["userid"] = userid
+#         if chatbotid: lead_info["chatbotid"] = chatbotid
+#         if name: lead_info["name"] = name
+#         if number: lead_info["number"] = number
+#         if purpose: lead_info["purpose"] = purpose
+#         if requirement: lead_info["requirements"] = requirement
 
+#         result = collection.insert_one(lead_info)
+#         return str(result.inserted_id)
+#     except Exception as e:
+#         return f"An error occured: {str(e)}"
+
+
+def store_lead_info(userid,chatbotid,name="", number="", purpose="", requirement="",hist="",uinput=""):
+    collection = db['leads'] # Collection for user requests
+    # print(hist)
+    # print("Running\n")
+    try:
+        lead_info = {
+            "name": name,
+            "number": number,
+            "purpose": purpose,
+            "requirements": requirement,
+            "userid":userid,
+            "chatbotid":chatbotid
+        }
+        collection.insert_one(lead_info)
         result = collection.insert_one(lead_info)
-        return str(result.inserted_id)
+        # return str(result.inserted_id)
+        response = openai.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[ 
+                {"role": "system", "content": "You are a helpful assistant .Given a chat history and the latest user prompt which might reference context in the chat history, formulate a contextualized standalone question which can be understood without the chat history.(Remove referential ambiguities by adding the reference from history) If it is in other language, translate the contextual query in English. Do NOT answer the user prompt, just reformulate it if needed and otherwise return it as is"},
+                {"role": "user", "content": "Chat History:  "+ hist + "User Prompt:" + uinput}
+            ])
+        #print(response.choices[0].message.content+"\n")
+        return (response.choices[0].message.content+"\n")
     except Exception as e:
-        return f"An error occured: {str(e)}"
+        return json.dumps({"status": "error", "message": str(e)})
+    
