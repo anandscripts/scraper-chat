@@ -72,6 +72,15 @@ def store_chat_history(question, answer, userid, chatbotid):
 
 def query_bot(history, contextualized_question, user_query, chatbotid):
     try:
+        prompts_collection = db["prompts"]  # Replace with your collection name
+
+        # Fetch the single prompt from MongoDB
+        prompt_data = prompts_collection.find_one({})
+        if not prompt_data or "prompt" not in prompt_data:
+            return "Error: Prompt not found in MongoDB."
+
+        # Retrieve the prompt
+        bot_prompt = prompt_data["prompt"]
         db = Chroma(persist_directory=CHROMA_PATH, embedding_function=embeddings, collection_name=chatbotid)
         # db = FAISS.load_local(FAISS_PATH, embeddings, id, allow_dangerous_deserialization=True)
 
@@ -94,12 +103,25 @@ def query_bot(history, contextualized_question, user_query, chatbotid):
 
         page_contents = "\n\n".join([doc.page_content for doc in docs])
 
-        response = llm.invoke(f'History:\n"{history}"\n\nDocuments:\n"{page_contents}"\n'+app.qbotpromptnew+user_query)
+        response = llm.invoke(f'History:\n"{history}"\n\nDocuments:\n"{page_contents}"\n'+ bot_prompt +user_query)
         return response.content
 
     except KeyError as e:
         return f"Error: Collection '{id}' not found in Chroma DB. {e}"
     
+
+def get_prompt():
+    prompts_collection=db.prompts
+    prompt_data = prompts_collection.find_one({})
+    return {"prompt": prompt_data["prompt"]}
+
+def update_prompt(prompt):
+    """Update the prompt in MongoDB."""
+    prompts_collection=db.prompts
+    result = prompts_collection.update_one({}, {"$set": {"prompt": prompt}}, upsert=True)
+    if result.modified_count > 0 or result.upserted_id:
+        return {"message": "Prompt updated successfully."}
+
 def chat_history(userid, chatbotid):
     history_list = list(db.chats.aggregate([
             {"$match": {"userId": userid, "chatbotId": chatbotid}},

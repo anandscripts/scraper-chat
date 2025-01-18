@@ -8,7 +8,7 @@ import prompts
 from pydantic import BaseModel
 from typing import List
 from scrape_links import scrape_links, scrape_text
-from store_response import store_text, proper_query, notification, chat_activity, delete_chat_history
+from store_response import store_text, proper_query, notification, chat_activity, delete_chat_history,get_prompt,update_prompt
 
 app = FastAPI()
 
@@ -80,16 +80,17 @@ def prompt_change(prompt:str):
 class PromptRequest(BaseModel):
     prompt:str
 
-@api2_router.put('/prompt')
-async def prompt(request:PromptRequest):
-    response = prompt_change(request.prompt)
-    return response
+# Pydantic model for the prompt
+class PromptUpdate(BaseModel):
+    prompt: str
 
-@api2_router.get('/testy')
-async def get(request:PromptRequest):
-    hello=qbotpromptnew
-    return hello
+@api2_router.get("/prompt", response_model=dict)
+def get_prompt1():
+    return get_prompt()
 
+@api2_router.put("/prompt")
+def update_prompt1(prompt_update: PromptUpdate):
+    return update_prompt(prompt_update.prompt)
 
 @api2_router.delete('/reset')
 async def delete_chat_historys(request: Request, chatbotid: str, userid: str = None):
