@@ -72,7 +72,8 @@ def store_chat_history(question, answer, userid, chatbotid):
 
 def query_bot(history, contextualized_question, user_query, chatbotid):
     try:
-        prompts_collection = db["prompts"]  # Replace with your collection name
+        db = mongoclient.chatbot
+        prompts_collection = db.prompts  # Replace with your collection name
 
         # Fetch the single prompt from MongoDB
         prompt_data = prompts_collection.find_one({})
