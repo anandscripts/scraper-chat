@@ -93,8 +93,13 @@ def update_prompt1(prompt_update: PromptUpdate):
     return update_prompt(prompt_update.prompt)
 
 @api2_router.delete('/reset')
-async def delete_chat_historys(request: Request, chatbotid: str, userid: str = None):
+async def delete_chat_historys(userid="dbfudovn",chatbotid="nvnobvneri"):
     return delete_chat_history(userid,chatbotid)
+
+@api2_router.post('/testing')
+async def testing(request: ResponseRequest,chatbotid="nvnobvneri"):
+    result = proper_query(request.question, "dbfudovn",chatbotid)
+    return {"data": result}
 
     
 @api2_router.get("/")

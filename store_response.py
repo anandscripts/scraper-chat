@@ -11,7 +11,7 @@ import dotenv
 import os
 import openai
 import json
-import app
+# import app
 import prompts
 
 CHROMA_PATH = "store_chroma"
