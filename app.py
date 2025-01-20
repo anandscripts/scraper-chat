@@ -35,10 +35,26 @@ async def scrape(request: Request, url: str):
 class LinksRequest(BaseModel):
     links: List[str]
 
+class LinkRequest(BaseModel):
+    url:str
+
+# Combined API endpoint
+@api2_router.post("/linktest")
+async def scrape(request: LinkRequest):
+    url = request.url
+    visited_links = set()
+    links = []
+    async for link_message in scrape_links(url, visited_links):
+        links.append(link_message)
+    text_data = scrape_text(links)
+    collection_id = store_text(text_data)
+    return {"chatbotId": collection_id}
+
+
 @api2_router.post("/scrape")
 async def scrape(request: LinksRequest):
     links = request.links  # This will get the links from the body
-    text_data = scrape_text(links)  
+    text_data = scrape_text(links)
     collection_id = store_text(text_data)
     return {"chatbotId": collection_id}
 
