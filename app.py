@@ -8,7 +8,7 @@ import prompts
 from pydantic import BaseModel
 from typing import List
 from scrape_links import scrape_links, scrape_text
-from store_response import store_text, proper_query, notification, chat_activity, delete_chat_history,get_prompt,update_prompt
+from store_response import store_text, proper_query, notification, chat_activity, delete_chat_history,get_prompt,update_prompt,store_test
 
 app = FastAPI()
 
@@ -47,7 +47,7 @@ async def scrape(request: LinkRequest):
     async for link_message in scrape_links(url, visited_links):
         links.append(link_message)
     text_data = scrape_text(links)
-    collection_id = store_text(text_data)
+    collection_id = store_test(text_data)
     return {"chatbotId": collection_id}
 
 
