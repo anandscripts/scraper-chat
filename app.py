@@ -110,6 +110,8 @@ def update_prompt1(prompt_update: PromptUpdate):
 
 @api2_router.delete('/reset')
 async def delete_chat_historys(userid="dbfudovn",chatbotid="nvnobvneri"):
+    userid="dbfudovn"
+    chatbotid="nvnobvneri"
     return delete_chat_history(userid,chatbotid)
 
 @api2_router.post('/testing')
