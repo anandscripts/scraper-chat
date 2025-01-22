@@ -9,6 +9,7 @@ from pymongo import MongoClient
 from datetime import datetime, timezone
 import dotenv
 import os
+from bson import ObjectId
 import openai
 import json
 # import app
@@ -146,6 +147,14 @@ def chat_history(userid, chatbotid):
         return history_list
     return None
 
+def getpage(id):
+    result1=db.Chatbot
+    result=list(result1.find({"chatbotId":id}, {"_id": 0,'userid':0}))
+    print(result)
+    if not result:
+            return "Error: chatbotid not found in MongoDB."
+    return result
+
 
 def execute_function(function_name, parameters,userid,chatbotid):
     """Dispatch and execute the appropriate function."""
@@ -251,7 +260,6 @@ def proper_query(user_input,userid, chatbotid):
     return result
     #bot_response = response.choices[0].message.content
     #return bot_response
-
 
 def notification(userid, chatbotid):
     history_list = chat_history(userid, chatbotid)
