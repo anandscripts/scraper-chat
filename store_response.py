@@ -9,7 +9,6 @@ from pymongo import MongoClient
 from datetime import datetime, timezone
 import dotenv
 import os
-from bson import ObjectId
 import openai
 import json
 # import app
