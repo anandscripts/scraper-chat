@@ -283,6 +283,15 @@ def notification(userid, chatbotid):
 #     except Exception as e:
 #         return f"An error occured: {str(e)}"
 
+def deletechroma(collection):
+    chroma = Chroma(persist_directory=CHROMA_PATH)
+    client = chroma._client
+    try:
+        client.delete_collection(collection)
+        print(f"Collection '{collection}' deleted successfully.")
+    except Exception as e:
+        print(f"Failed to delete collection '{collection}': {str(e)}")
+    
 
 def store_lead_info(userid,chatbotid,name="", number="", purpose="", requirement="",hist="",uinput=""):
     collection = db['leads'] # Collection for user requests

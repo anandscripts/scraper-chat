@@ -8,7 +8,7 @@ import prompts
 from pydantic import BaseModel
 from typing import List
 from scrape_links import scrape_links, scrape_text
-from store_response import store_text, proper_query, notification, chat_activity, delete_chat_history,get_prompt,update_prompt,store_test,getpage
+from store_response import store_text, proper_query, notification, chat_activity, delete_chat_history,get_prompt,update_prompt,store_test,getpage,deletechroma
 
 app = FastAPI()
 
@@ -112,11 +112,15 @@ def update_prompt1(prompt_update: PromptUpdate):
 async def delete_chat_historys(userid="dbfudovn",chatbotid="nvnobvneri"):
     userid="dbfudovn"
     chatbotid="nvnobvneri"
+    deletechroma(chatbotid)
     return delete_chat_history(userid,chatbotid)
 
+class QuestionRequest(BaseModel):
+    question: str
+
 @api2_router.post('/testing')
-async def testing(request: ResponseRequest,chatbotid="nvnobvneri"):
-    result = proper_query(request.question, "dbfudovn",chatbotid)
+async def testing(questions:QuestionRequest):
+    result = proper_query(questions.question, "dbfudovn","nvnobvneri")
     return {"data": result}
 
 @api2_router.get("/pages")
